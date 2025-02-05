@@ -13,7 +13,7 @@ function App() {
 
   // 狀態管理 (State)
   const [account, setAccount] = useState({ username: "example@test.com", password: "example"});
-  const [isAuth, setisAuth] = useState(false);
+  const [isAuth, setIsAuth] = useState(false);
   const [products, setProducts] = useState([]);
   //Modal 資料狀態的預設值
   const defaultModalState = {
@@ -39,24 +39,23 @@ function App() {
       const { token, expired } = res.data;
       document.cookie = `hexToken=${token}; userLanguage=en; userPreference=darkMode; expires=${new Date(expired)}`; // 設定 cookie
       axios.defaults.headers.common['Authorization'] = token;
-
       getProducts(); // 查詢商品資料列表
-      setisAuth(true); // 設定登入狀態
+      setIsAuth(true); // 設定登入狀態
     })
-    .catch((err) => {
-      console.error(err);
+    .catch((error) => {
+      console.error(error);
       alert('登入失敗');
     });
   };
   const checkLogin = () => {
     axios.post(`${baseURL}/v2/api/user/check`)
     .then(() => {
-      setisAuth(true);
+      setIsAuth(true);
       getProducts();
     })
-    .catch((err) => {
-      console.error(err);
-      setisAuth(false);
+    .catch((error) => {
+      console.error(error);
+      setIsAuth(false);
     });
   };
   const getProducts = () => {
@@ -67,6 +66,20 @@ function App() {
       .catch((error) => {
         console.error(error);
       });
+
+    // getall寫法
+    // axios.get(`${baseURL}/v2/api/${apiPath}/admin/products/all`)
+    //   .then((res) => {
+    //     const productsData = res.data.products;
+    //     const productsArray = Object.keys(productsData).map((key) => ({
+    //       ...productsData[key], // 產品的詳細資料
+    //       id: key, // 把 id 加回來
+    //     }));
+    //     setProducts(productsArray);
+    //   })
+    //   .catch((error) => {
+    //     console.error(error);
+    //   });
   };
   
   // 表單變更事件
@@ -98,6 +111,10 @@ function App() {
       ...prev,
       imagesUrl: newImagesUrl
     }));
+    // setTempProduct((prev) => ({
+    //   ...prev,
+    //   imagesUrl: prev.imagesUrl.map((img, i) => (i === index ? value : img))
+    // }));
   };
   // Modal表單 - 新增、刪除副圖
   const handleAddImage = () => {
@@ -135,31 +152,33 @@ function App() {
       alert('新增商品失敗');
     }
   };
-  // // 編輯產品
-  // const updateProduct = async () => {
-  //   try {
-  //     await axios.put(`${baseURL}/v2/api/${apiPath}/admin/product/${tempProduct.id}`, 
-  //       { 
-  //         data: {
-  //           ...tempProduct,
-  //           origin_price: Number(tempProduct.origin_price), 
-  //           price: Number(tempProduct.price),
-  //           is_enabled: tempProduct.is_enabled ? 1 : 0
-  //         }
-  //       });
-  //   } 
-  //   catch (error) {
-  //     console.error(error);
-  //     alert('更新商品失敗');
-  //   }
-  // };
+  // 編輯產品
+  const updateProduct = async () => {
+    try {
+      await axios.put(`${baseURL}/v2/api/${apiPath}/admin/product/${tempProduct.id}`, 
+        { 
+          data: {
+            ...tempProduct,
+            origin_price: Number(tempProduct.origin_price), 
+            price: Number(tempProduct.price),
+            is_enabled: tempProduct.is_enabled ? 1 : 0
+          }
+        });
+    } 
+    catch (error) {
+      console.error(error);
+      alert('更新商品失敗');
+    }
+  };
 
   const handleUpdateProduct = async () => {
-    // setModalMode(mode);
+    //const apiCall = modalMode === 'create' ? createProduct : updateProduct; // 判斷是新增還是編輯
     try {
-      await createProduct();
-      handleCloseProductModal(); // 關閉 Modal、重新取得商品列表
+      // await createProduct();
+      // await apiCall();
+      await (modalMode === 'create' ? createProduct() : updateProduct()); // 179行 + 182行簡化
       getProducts();
+      handleCloseProductModal(); // 關閉 Modal、重新取得商品列表
     } 
     catch (error) {
       console.error(error);
@@ -179,8 +198,8 @@ function App() {
   const handleDeleteProduct = async () => {
     try {
       await deleteProduct();
-      handleCloseDeleteModal(); // 關閉 Modal、重新取得商品列表
       getProducts();
+      handleCloseDeleteModal(); // 關閉 Modal、重新取得商品列表
     } 
     catch (error) {
       console.error(error);
@@ -203,27 +222,25 @@ function App() {
     //     break;
     // }
     // setTempProduct(product || defaultModalState); // 簡化switch，新增就使用預設值defaultModalState處理
-    setTempProduct(
-      product && Object.keys(product).length > 0 ? product : defaultModalState
-    ); // 避免 api 回傳 product 為空物件時，無法正確設定tempProduct更保險
-    const modalInstance = Modal.getInstance(productModalRef.current);
-    modalInstance.show();
+    setTempProduct( Object.keys(product).length > 0 ? product : defaultModalState ); // 避免 api 回傳 product 為空物件時，無法正確設定tempProduct更保險
+    // const modalInstance = Modal.getInstance(productModalRef.current);
+    // modalInstance.show();
+    Modal.getInstance(productModalRef.current).show();
   };
   const handleCloseProductModal = () => {  
-    const modalInstance = Modal.getInstance(productModalRef.current);
-    modalInstance.hide();
+    // const modalInstance = Modal.getInstance(productModalRef.current);
+    // modalInstance.hide();
+    Modal.getInstance(productModalRef.current).hide();
   };
   // DeleteModal
   const handleOpenDeleteModal = (product = defaultModalState) => {  
-    setTempProduct(
+    setTempProduct( // 避免 api 回傳 product 為空物件時，無法正確設定tempProduct更保險
       product && Object.keys(product).length > 0 ? product : defaultModalState
-    ); // 避免 api 回傳 product 為空物件時，無法正確設定tempProduct更保險
-    const modalInstance = Modal.getInstance(deleteModalRef.current);
-    modalInstance.show();
+    );
+    Modal.getInstance(deleteModalRef.current).show();
   };
-  const handleCloseDeleteModal = () => {  
-    const modalInstance = Modal.getInstance(deleteModalRef.current);
-    modalInstance.hide();
+  const handleCloseDeleteModal = () => {
+    Modal.getInstance(deleteModalRef.current).hide();
   };
 
   // useEffect
@@ -258,7 +275,7 @@ function App() {
             <thead>
               <tr>
                 <th width="120">分類</th>
-                <th>產品名稱</th>
+                <th width="500">產品名稱</th>
                 <th width="120">原價</th>
                 <th width="120">售價</th>
                 <th width="100">是否啟用</th>
@@ -272,7 +289,11 @@ function App() {
                   <td>{product.title}</td>
                   <td>{product.origin_price}</td>
                   <td>{product.price}</td>
-                  <td>{product.is_enabled}</td>
+                  <td>
+                    {
+                      product.is_enabled ? <span className="text-success">啟用</span> : <span>未啟用</span>
+                    }
+                  </td>
                   <td>
                     <div className="btn-group">
                       <button type="button" onClick={() => {handleOpenProductModal('edit', product)}} className="btn btn-outline-primary btn-sm">編輯</button>
@@ -284,8 +305,6 @@ function App() {
             </tbody>
           </table>
         </div>
-        
-        
       ) : (
         <div className="d-flex flex-column justify-content-center align-items-center vh-100">
           <h1 className="mb-5">請先登入</h1>
@@ -320,8 +339,6 @@ function App() {
           </form>
         </div>
       )}
-
-
       <div id="productModal" ref={productModalRef} className="modal" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
         <div className="modal-dialog modal-dialog-centered modal-xl">
           <div className="modal-content border-0 shadow">
@@ -355,7 +372,7 @@ function App() {
                   </div>
                   {/* 副圖 */}
                   <div className="border border-2 border-dashed rounded-3 p-3">
-                    {tempProduct.imagesUrl?.map((image, index) => (
+                    {tempProduct.imagesUrl?.length > 0 && tempProduct.imagesUrl.map((image, index) => (
                       <div key={index} className="mb-2">
                         <label
                           htmlFor={`imagesUrl-${index + 1}`}
@@ -537,7 +554,7 @@ function App() {
         <div className="modal-dialog">
           <div className="modal-content">
             <div className="modal-header">
-              <h1 className="modal-title fs-5">刪除產品：{tempProduct.title}</h1>
+              <h1 className="modal-title fs-5">刪除產品</h1>
               <button
                 type="button"
                 className="btn-close"
