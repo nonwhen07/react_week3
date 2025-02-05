@@ -12,26 +12,11 @@ function App() {
   const deleteModalRef = useRef(null);
 
   // 狀態管理 (State)
-  const [account, setAccount] = useState({
-    username: "example@test.com",
-    password: "example",
-  });
+  const [account, setAccount] = useState({ username: "example@test.com", password: "example"});
   const [isAuth, setisAuth] = useState(false);
   const [products, setProducts] = useState([]);
   //Modal 資料狀態的預設值
-  // const defaultModalState = {
-  //   imageUrl: "",
-  //   title: "",
-  //   category: "",
-  //   unit: "",
-  //   origin_price: "",
-  //   price: "",
-  //   description: "",
-  //   content: "",
-  //   is_enabled: 0,
-  //   imagesUrl: [""]
-  // };
-  const [tempProduct, setTempProduct] = useState( {
+  const defaultModalState = {
     imageUrl: "",
     title: "",
     category: "",
@@ -42,7 +27,9 @@ function App() {
     content: "",
     is_enabled: 0,
     imagesUrl: [""]
-  });
+  };
+  const [tempProduct, setTempProduct] = useState(defaultModalState);
+  const [modalMode, setModalMode] = useState(null);
 
   // API & 認證相關函式
   const handleLogin = (e) =>{
@@ -64,7 +51,6 @@ function App() {
   const checkLogin = () => {
     axios.post(`${baseURL}/v2/api/user/check`)
     .then(() => {
-      //alert('使用者已登入');
       setisAuth(true);
       getProducts();
     })
@@ -78,8 +64,8 @@ function App() {
       .then((res) => {
         setProducts(res.data.products);
       })
-      .catch((err) => {
-        console.error(err);
+      .catch((error) => {
+        console.error(error);
       });
   };
   
@@ -98,21 +84,128 @@ function App() {
   };
   // Modal表單
   const handleModalInputChange = (e) =>{
-    // const { value, name, checked, type } = e.target;
-    // setTempProduct({
-    //   ...tempProduct,
-    //   [name]: type === 'checkbox' ? checked : value, //透過type判斷是否為checkbox，綁定 checkbox 的勾選狀態時，應透過 checked 屬性，而非 value
-    // })
     const { name, value, checked, type } = e.target;
     setTempProduct((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value, //透過type判斷是否為checkbox，綁定 checkbox 的勾選狀態時，應透過 checked 屬性，而非 value
     }));
   };
+  const handleImageChange = (e, index) => {
+    const { value } = e.target;
+    const newImagesUrl = [...tempProduct.imagesUrl]; // 複製一份原本的副圖陣列
+    newImagesUrl[index] = value; // 找出要修改的陣列index，進行修改
+    setTempProduct((prev) => ({
+      ...prev,
+      imagesUrl: newImagesUrl
+    }));
+  };
+  // Modal表單 - 新增、刪除副圖
+  const handleAddImage = () => {
+    const newImagesUrl = [...tempProduct.imagesUrl, '']; // 複製一份原本的副圖陣列
+    setTempProduct((prev) => ({
+      ...prev,
+      imagesUrl: newImagesUrl
+    }));
+  };
+  const handleDeleteImage = () => {
+    const newImagesUrl = [...tempProduct.imagesUrl]; // 複製一份原本的副圖陣列
+    newImagesUrl.pop(); // 移除最後一筆
+    setTempProduct((prev) => ({
+      ...prev,
+      imagesUrl: newImagesUrl
+    }));
+  };
+
+  // 新增、編輯、刪除產品
+  // 新增產品
+  const createProduct = async () => {
+    try{ // 傳值data時，需包裝成物件{data: {}}，並將tempProduct的origin_price、price轉換為數字，is_enabled轉換為數字0或1
+      await axios.post(`${baseURL}/v2/api/${apiPath}/admin/product`, 
+        { 
+          data: {
+            ...tempProduct,
+            origin_price: Number(tempProduct.origin_price), 
+            price: Number(tempProduct.price),
+            is_enabled: tempProduct.is_enabled ? 1 : 0
+          }
+        });
+    }
+    catch(error){
+      console.error(error);
+      alert('新增商品失敗');
+    }
+  };
+  // // 編輯產品
+  // const updateProduct = async () => {
+  //   try {
+  //     await axios.put(`${baseURL}/v2/api/${apiPath}/admin/product/${tempProduct.id}`, 
+  //       { 
+  //         data: {
+  //           ...tempProduct,
+  //           origin_price: Number(tempProduct.origin_price), 
+  //           price: Number(tempProduct.price),
+  //           is_enabled: tempProduct.is_enabled ? 1 : 0
+  //         }
+  //       });
+  //   } 
+  //   catch (error) {
+  //     console.error(error);
+  //     alert('更新商品失敗');
+  //   }
+  // };
+
+  const handleUpdateProduct = async () => {
+    // setModalMode(mode);
+    try {
+      await createProduct();
+      handleCloseProductModal(); // 關閉 Modal、重新取得商品列表
+      getProducts();
+    } 
+    catch (error) {
+      console.error(error);
+    }
+  };
+
+  //刪除產品
+  const deleteProduct = async () => {
+    try {
+      await axios.delete(`${baseURL}/v2/api/${apiPath}/admin/product/${tempProduct.id}`);
+    } 
+    catch (error) {
+      console.error(error);
+      alert('刪除商品失敗');
+    }
+  };
+  const handleDeleteProduct = async () => {
+    try {
+      await deleteProduct();
+      handleCloseDeleteModal(); // 關閉 Modal、重新取得商品列表
+      getProducts();
+    } 
+    catch (error) {
+      console.error(error);
+    }
+  };
+
 
   // Modal 控制
   // ProductModal
-  const handleOpenProductModal = () => {  
+  const handleOpenProductModal = (mode, product = defaultModalState) => {  
+    setModalMode(mode);
+    // switch (mode) {
+    //   case 'create':
+    //     setTempProduct(defaultModalState);
+    //     break;
+    //   case 'edit':
+    //     setTempProduct(product || defaultModalState);
+    //     break;
+    //   default:
+    //     break;
+    // }
+    // setTempProduct(product || defaultModalState); // 簡化switch，新增就使用預設值defaultModalState處理
+    setTempProduct(
+      product && Object.keys(product).length > 0 ? product : defaultModalState
+    ); // 避免 api 回傳 product 為空物件時，無法正確設定tempProduct更保險
     const modalInstance = Modal.getInstance(productModalRef.current);
     modalInstance.show();
   };
@@ -121,7 +214,10 @@ function App() {
     modalInstance.hide();
   };
   // DeleteModal
-  const handleOpenDeleteModal = () => {  
+  const handleOpenDeleteModal = (product = defaultModalState) => {  
+    setTempProduct(
+      product && Object.keys(product).length > 0 ? product : defaultModalState
+    ); // 避免 api 回傳 product 為空物件時，無法正確設定tempProduct更保險
     const modalInstance = Modal.getInstance(deleteModalRef.current);
     modalInstance.show();
   };
@@ -129,8 +225,9 @@ function App() {
     const modalInstance = Modal.getInstance(deleteModalRef.current);
     modalInstance.hide();
   };
-  
-  //初始化 初始檢查登入
+
+  // useEffect
+  // 初始化 初始檢查登入
   useEffect(() =>{
     const token = document.cookie.replace(
       /(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/,
@@ -138,13 +235,9 @@ function App() {
     );
     axios.defaults.headers.common['Authorization'] = token;
     checkLogin();
-  },[]);
+  }, []);
   //初始化 Modal
   useEffect(() => {
-    // new Modal(productModalRef.current, { backdrop: false });
-    // Modal.getInstance(productModalRef.current);
-    // new Modal(deleteModalRef.current, { backdrop: false });
-    // Modal.getInstance(productModalRef.current);
     if (productModalRef.current) {
       new Modal(productModalRef.current, { backdrop: false });
     }
@@ -159,7 +252,7 @@ function App() {
         <div className="container py-5">
           <div className="d-flex justify-content-between">
             <h2>產品列表</h2>
-            <button className="btn btn-primary" onClick={handleOpenProductModal}>新增產品</button>
+            <button className="btn btn-primary" onClick={() => {handleOpenProductModal('create')}}>新增產品</button>
           </div>
           <table className="table mt-4">
             <thead>
@@ -180,19 +273,10 @@ function App() {
                   <td>{product.origin_price}</td>
                   <td>{product.price}</td>
                   <td>{product.is_enabled}</td>
-                  {/* <td>
-                    <button
-                      onClick={() => setTempProduct(product)}
-                      className="btn btn-primary"
-                      type="button"
-                    >
-                      查看細節
-                    </button>
-                  </td> */}
                   <td>
                     <div className="btn-group">
-                      <button type="button" onClick={handleOpenProductModal} className="btn btn-outline-primary btn-sm">編輯</button>
-                      <button type="button" onClick={handleOpenDeleteModal} className="btn btn-outline-danger btn-sm">刪除</button>
+                      <button type="button" onClick={() => {handleOpenProductModal('edit', product)}} className="btn btn-outline-primary btn-sm">編輯</button>
+                      <button type="button" onClick={() => {handleOpenDeleteModal(product)}} className="btn btn-outline-danger btn-sm">刪除</button>
                     </div>
                   </td>
                 </tr>
@@ -242,7 +326,7 @@ function App() {
         <div className="modal-dialog modal-dialog-centered modal-xl">
           <div className="modal-content border-0 shadow">
             <div className="modal-header border-bottom">
-              <h5 className="modal-title fs-4">新增產品</h5>
+              <h5 className="modal-title fs-4">{modalMode === 'create' ? '新增產品' : '編輯 - ' + tempProduct.title}</h5>
               <button type="button" onClick={handleCloseProductModal} className="btn-close" aria-label="Close"></button>
             </div>
             <div className="modal-body p-4">
@@ -280,6 +364,8 @@ function App() {
                           副圖 {index + 1}
                         </label>
                         <input
+                          value={image}
+                          onChange={(e) => { handleImageChange(e, index) }}
                           id={`imagesUrl-${index + 1}`}
                           type="text"
                           placeholder={`圖片網址 ${index + 1}`}
@@ -295,6 +381,15 @@ function App() {
                       </div>
                     ))}
 
+                  </div>
+                  <div className="btn-group w-100">
+                    {
+                      tempProduct.imagesUrl.length < 5 && tempProduct.imagesUrl[tempProduct.imagesUrl.length-1] !== ""
+                        && (<button onClick={handleAddImage} className="btn btn-outline-primary btn-sm w-100">新增圖片</button>)
+                    }
+                    {
+                      tempProduct.imagesUrl.length > 1 && (<button onClick={handleDeleteImage} className="btn btn-outline-danger btn-sm w-100">刪除圖片</button>)
+                    }
                   </div>
                 </div>
 
@@ -425,7 +520,7 @@ function App() {
               <button type="button" onClick={handleCloseProductModal} className="btn btn-secondary">
                 取消
               </button>
-              <button type="button" className="btn btn-primary">
+              <button type="button" onClick={handleUpdateProduct} className="btn btn-primary">
                 確認
               </button>
             </div>
@@ -442,7 +537,7 @@ function App() {
         <div className="modal-dialog">
           <div className="modal-content">
             <div className="modal-header">
-              <h1 className="modal-title fs-5">刪除產品</h1>
+              <h1 className="modal-title fs-5">刪除產品：{tempProduct.title}</h1>
               <button
                 type="button"
                 className="btn-close"
@@ -461,7 +556,7 @@ function App() {
               >
                 取消
               </button>
-              <button type="button" className="btn btn-danger">
+              <button type="button" onClick={handleDeleteProduct} className="btn btn-danger">
                 刪除
               </button>
             </div>
