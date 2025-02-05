@@ -3,9 +3,15 @@ import { Modal } from 'bootstrap';
 import axios from 'axios';
 
 function App() {
+  // 環境變數
   const baseURL = import.meta.env.VITE_BASE_URL;
   const apiPath = import.meta.env.VITE_API_PATH;
-  
+
+  // Modal Ref 定義
+  const productModalRef = useRef(null);
+  const deleteModalRef = useRef(null);
+
+  // 狀態管理 (State)
   const [account, setAccount] = useState({
     username: "example@test.com",
     password: "example",
@@ -13,7 +19,19 @@ function App() {
   const [isAuth, setisAuth] = useState(false);
   const [products, setProducts] = useState([]);
   //Modal 資料狀態的預設值
-  const defaultModalState = {
+  // const defaultModalState = {
+  //   imageUrl: "",
+  //   title: "",
+  //   category: "",
+  //   unit: "",
+  //   origin_price: "",
+  //   price: "",
+  //   description: "",
+  //   content: "",
+  //   is_enabled: 0,
+  //   imagesUrl: [""]
+  // };
+  const [tempProduct, setTempProduct] = useState( {
     imageUrl: "",
     title: "",
     category: "",
@@ -24,24 +42,11 @@ function App() {
     content: "",
     is_enabled: 0,
     imagesUrl: [""]
-  };
+  });
 
-  
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    // setAccount({
-    //   ...account,
-    //   [name]: value
-    // });
-    setAccount((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
+  // API & 認證相關函式
   const handleLogin = (e) =>{
     e.preventDefault();
-
     axios.post(`${baseURL}/v2/admin/signin`, account)  
     .then((res) => {
       const { token, expired } = res.data;
@@ -56,7 +61,6 @@ function App() {
       alert('登入失敗');
     });
   };
-
   const checkLogin = () => {
     axios.post(`${baseURL}/v2/api/user/check`)
     .then(() => {
@@ -69,38 +73,6 @@ function App() {
       setisAuth(false);
     });
   };
-
-  useEffect(() =>{
-    const token = document.cookie.replace(
-      /(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/,
-      "$1"
-    );
-    axios.defaults.headers.common['Authorization'] = token;
-    checkLogin();
-  },[]);
-
-  
-  
-  // const checkLogin = async() => {
-  //   try{
-  //     await axios.post(`${baseURL}/v2/api/user/check`);
-  //     setisAuth(true);
-  //     getProducts();
-  //   }
-  //   catch(err){
-  //     console.error(err);
-  //     setisAuth(false);
-  //   }
-  //   // axios.post(`${baseURL}/v2/api/user/check`)
-  //   // .then(() => {
-  //   //   alert('使用者已登入');
-  //   // })
-  //   // .catch(() => {
-  //   //   console.error(err);
-  //   //   setisAuth(false);
-  //   // });
-  // };
-
   const getProducts = () => {
     axios.get(`${baseURL}/v2/api/${apiPath}/admin/products`)
       .then((res) => {
@@ -110,48 +82,21 @@ function App() {
         console.error(err);
       });
   };
-
-
-  const productModalRef = useRef(null);
-  const deleteModalRef = useRef(null);
   
-  useEffect(() => {
-    // new Modal(productModalRef.current, { backdrop: false });
-    // Modal.getInstance(productModalRef.current);
-    // new Modal(deleteModalRef.current, { backdrop: false });
-    // Modal.getInstance(productModalRef.current);
-    if (productModalRef.current) {
-      new Modal(productModalRef.current, { backdrop: false });
-    }
-    if (deleteModalRef.current) {
-      new Modal(deleteModalRef.current, { backdrop: false });
-    }
-  }, [productModalRef, deleteModalRef]);
-
-  const handleOpenProductModal = () => {  
-    const modalInstance = Modal.getInstance(productModalRef.current);
-    modalInstance.show();
+  // 表單變更事件
+  // 登入表單
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    // setAccount({
+    //   ...account,
+    //   [name]: value
+    // });
+    setAccount((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
-
-  const handleCloseProductModal = () => {  
-    const modalInstance = Modal.getInstance(productModalRef.current);
-    modalInstance.hide();
-  };
-
-
-  const handleOpenDeleteModal = () => {  
-    const modalInstance = Modal.getInstance(deleteModalRef.current);
-    modalInstance.show();
-  };
-
-  const handleCloseDeleteModal = () => {  
-    const modalInstance = Modal.getInstance(deleteModalRef.current);
-    modalInstance.hide();
-  };
-  
-  
-  const [tempProduct, setTempProduct] = useState(defaultModalState);
-
+  // Modal表單
   const handleModalInputChange = (e) =>{
     // const { value, name, checked, type } = e.target;
     // setTempProduct({
@@ -164,6 +109,49 @@ function App() {
       [name]: type === "checkbox" ? checked : value, //透過type判斷是否為checkbox，綁定 checkbox 的勾選狀態時，應透過 checked 屬性，而非 value
     }));
   };
+
+  // Modal 控制
+  // ProductModal
+  const handleOpenProductModal = () => {  
+    const modalInstance = Modal.getInstance(productModalRef.current);
+    modalInstance.show();
+  };
+  const handleCloseProductModal = () => {  
+    const modalInstance = Modal.getInstance(productModalRef.current);
+    modalInstance.hide();
+  };
+  // DeleteModal
+  const handleOpenDeleteModal = () => {  
+    const modalInstance = Modal.getInstance(deleteModalRef.current);
+    modalInstance.show();
+  };
+  const handleCloseDeleteModal = () => {  
+    const modalInstance = Modal.getInstance(deleteModalRef.current);
+    modalInstance.hide();
+  };
+  
+  //初始化 初始檢查登入
+  useEffect(() =>{
+    const token = document.cookie.replace(
+      /(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/,
+      "$1"
+    );
+    axios.defaults.headers.common['Authorization'] = token;
+    checkLogin();
+  },[]);
+  //初始化 Modal
+  useEffect(() => {
+    // new Modal(productModalRef.current, { backdrop: false });
+    // Modal.getInstance(productModalRef.current);
+    // new Modal(deleteModalRef.current, { backdrop: false });
+    // Modal.getInstance(productModalRef.current);
+    if (productModalRef.current) {
+      new Modal(productModalRef.current, { backdrop: false });
+    }
+    if (deleteModalRef.current) {
+      new Modal(deleteModalRef.current, { backdrop: false });
+    }
+  }, [productModalRef, deleteModalRef]);
 
   return (
     <>
