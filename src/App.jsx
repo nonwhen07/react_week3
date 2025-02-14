@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal } from 'bootstrap';
 import axios from 'axios';
+import { Modal } from 'bootstrap';
+import LoginPage from "./pages/LoginPage"
 
 function App() {
   // 環境變數
@@ -12,7 +13,6 @@ function App() {
   const deleteModalRef = useRef(null);
 
   // 狀態管理 (State)
-  const [account, setAccount] = useState({ username: "example@test.com", password: "example"});
   const [isAuth, setIsAuth] = useState(false);
   const [products, setProducts] = useState([]);
   //Modal 資料狀態的預設值
@@ -32,21 +32,6 @@ function App() {
   const [modalMode, setModalMode] = useState(null);
 
   // API & 認證相關函式
-  const handleLogin = (e) =>{
-    e.preventDefault();
-    axios.post(`${baseURL}/v2/admin/signin`, account)  
-    .then((res) => {
-      const { token, expired } = res.data;
-      document.cookie = `hexToken=${token}; userLanguage=en; userPreference=darkMode; expires=${new Date(expired)}`; // 設定 cookie
-      axios.defaults.headers.common['Authorization'] = token;
-      getProducts(); // 查詢商品資料列表
-      setIsAuth(true); // 設定登入狀態
-    })
-    .catch((error) => {
-      console.error(error);
-      alert('登入失敗');
-    });
-  };
   const checkLogin = () => {
     axios.post(`${baseURL}/v2/api/user/check`)
     .then(() => {
@@ -66,7 +51,6 @@ function App() {
       .catch((error) => {
         console.error(error);
       });
-
     // getall寫法
     // axios.get(`${baseURL}/v2/api/${apiPath}/admin/products/all`)
     //   .then((res) => {
@@ -83,18 +67,6 @@ function App() {
   };
   
   // 表單變更事件
-  // 登入表單
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    // setAccount({
-    //   ...account,
-    //   [name]: value
-    // });
-    setAccount((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
   // Modal表單
   const handleModalInputChange = (e) =>{
     const { name, value, checked, type } = e.target;
@@ -247,7 +219,7 @@ function App() {
   // 初始化 初始檢查登入
   useEffect(() =>{
     const token = document.cookie.replace(
-      /(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/,
+      /(?:(?:^|.*;\s*)hexToken4\s*=\s*([^;]*).*$)|^.*$/,
       "$1"
     );
     axios.defaults.headers.common['Authorization'] = token;
@@ -305,40 +277,8 @@ function App() {
             </tbody>
           </table>
         </div>
-      ) : (
-        <div className="d-flex flex-column justify-content-center align-items-center vh-100">
-          <h1 className="mb-5">請先登入</h1>
-          <form onSubmit={handleLogin} className="d-flex flex-column gap-3">
-            <div className="form-floating mb-3">
-              <input
-                name="username"
-                type="email"
-                value={account.username || ""}
-                onChange={handleInputChange}
-                className="form-control"
-                id="username"
-                placeholder="example@test.com"
-              />
-              <label htmlFor="username">Email address</label>
-            </div>
-            <div className="form-floating">
-              <input
-                name="password"
-                type="password"
-                value={account.password || ""}
-                onChange={handleInputChange}
-                className="form-control"
-                id="password"
-                placeholder="example"
-              />
-              <label htmlFor="password">Password</label>
-            </div>
-            <button type="submit" className="btn btn-primary">
-              登入
-            </button>
-          </form>
-        </div>
-      )}
+      ) : <LoginPage getProducts={getProducts} setIsAuth={setIsAuth} />}
+
       <div id="productModal" ref={productModalRef} className="modal" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
         <div className="modal-dialog modal-dialog-centered modal-xl">
           <div className="modal-content border-0 shadow">
